@@ -218,15 +218,16 @@ int main (int argc, char **argv)
 	//print_mat_info(grad);
 	//imshow("Ans2", grad);
 	
-	Mat grad_b,grad_f,grad_fusion,grad_lap;
-	compute_gradient(img1, grad_b);
-	compute_gradient(img2, grad_f);
+	//Mat grad_b,grad_f,grad_fusion,grad_lap;
+	//compute_gradient(img1, grad_b);
+	//compute_gradient(img2, grad_f);
 	//imshow("grad_b",grad_b);
 	//imshow("grad_f",grad_f);
-	simple_replace(grad_b, x, y, grad_f, sx, sy, w, h, grad_fusion);
-	print_mat_info(grad_fusion);
+	//simple_replace(grad_b, x, y, grad_f, sx, sy, w, h, grad_fusion);
+	//print_mat_info(grad_fusion);
 	//imshow("grad_fusion",grad_fusion);
 
+	//imshow("img1",img1);
 	//compute_laplacian(grad_fusion, grad_lap);
 	//Laplacian(grad_fusion, grad_lap,grad_fusion.depth());
 	//print_mat_info(grad_lap);
@@ -254,6 +255,8 @@ int main (int argc, char **argv)
 	poisson(in2, in1, Rect(sx, sy, w, h), Point(x, y), res);
 	res.convertTo(res, CV_8UC1);
 	Mat roimat = img1( Rect( x, y, w, h ) );
+
+
 	res.copyTo(roimat);
 
 	//imshow("roi",res);
