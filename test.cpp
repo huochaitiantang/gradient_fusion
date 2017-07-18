@@ -1,22 +1,81 @@
+#include<stdio.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
+#include<iomanip>
 using namespace cv;
 using namespace std;
 
-int print_mat_info(Mat mat){
-	cout << "continuous:" << mat.isContinuous() << endl;
-	cout << "channels:" << mat.channels() << endl;
-	cout << "cols:" << mat.cols << endl;
-	cout << "rows:" << mat.rows << endl;
+void compute_gradient( const Mat &img, Mat &ans){
+	int scale = 1;
+	int delta = 0;
+	int ddepth = CV_16S;
+	Mat Ans_gray, grad, grad_x, grad_y, abs_grad_x, abs_grad_y;
+	GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
+	//cvtColor( img, Ans_gray, CV_RGB2GRAY );
+	Sobel( img, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+	Sobel( img, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+	//Scharr( img, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
+	//Scharr( img, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
+	convertScaleAbs( grad_x, abs_grad_x );
+	convertScaleAbs( grad_y, abs_grad_y );
+	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, ans );
+	//addWeighted( grad_x, 0.5, grad_y, 0.5, 0, grad );
+}
+
+/* Print mat infomation
+ * mat: img
+ * s: mat name
+ */
+int print_mat_info(Mat mat, const char* s){
+	cout << " -- " << s << ":" << endl;
+	cout << "\tcti:" << mat.isContinuous();
+	cout << " cha:" << mat.channels();
+	cout << " col:" << mat.cols;
+	cout << " row:" << mat.rows << endl;
+	cout << endl;
 	return 0;
 }
 
+/* Simply replace the part of img obj with the part of img src
+ * obj : object img
+ * src : source img
+ * pt : object cordinate anchor
+ * roi : source roi part
+ * ans : result img
+ */ 
+void simple_replace(const Mat& obj, Point pt, const Mat &src, Rect roi, Mat& ans){
+	ans = obj.clone();
+	int c = src.channels();
+	int orow = obj.rows;
+	int ocol = obj.cols;
+	if(obj.channels() != src.channels()){
+		cout << "ERROR: obj and src channels not matched!" << endl;
+		return;
+	}
+	for(int i = pt.y; i < pt.y + roi.height && i < orow; i++){
+		for(int j = pt.x; j < pt.x + roi.width && j < ocol; j++){
+			for(int k = 0; k < c; k++){
+				ans.at<Vec3b>(i,j)[k] = src.at<Vec3b>( i - pt.y + roi.y, j - pt.x + roi.x )[k];
+			}
+		}
+	}
+}
+
+/* Compute the index
+ * i,j : cordinate
+ * w : size of column
+ */
 int get_ind(int i, int j, int w){
 	return i * w + j;
 }
 
+/* Get the matrix A in Ax = b
+ * A : result
+ * h : img height
+ * w : img width
+ */
 void  getA(Mat &A, int h, int w){
 	Mat M, temp, roimat;
 	A = Mat::eye( h * w, h * w, CV_64FC1);
@@ -35,8 +94,7 @@ void  getA(Mat &A, int h, int w){
 	temp *= 2;
 	roimat = M( Rect( 1, 1, w - 2, h - 2) );
 	temp.copyTo(roimat);
-
-	cout << "start A" << endl;
+	//corner has 2 neighbors, border has 3 neighbors, other has 4 neighbors
 	for(int i = 0; i < h; i++){
 		for(int j = 0; j < w; j++){
 			int label = get_ind(i, j, w);
@@ -76,10 +134,76 @@ void  getA(Mat &A, int h, int w){
 			}
 		}
 	}
-	cout << "end A" << endl;
 }
 
+void  getA1(Mat &A, int h, int w){
+	Mat M, temp, roimat;
+	A = Mat::eye( h * w, h * w, CV_64FC1);
+	A *= -4;
+	M = Mat::zeros( h, w, CV_64FC1);
 
+	temp = Mat::ones( h, w - 2, CV_64FC1);
+	roimat = M( Rect( 1, 0, w - 2, h) );
+	temp.copyTo(roimat);
+
+	temp = Mat::ones( h - 2, w, CV_64FC1);
+	roimat = M( Rect( 0, 1, w, h - 2) );
+	temp.copyTo(roimat);
+	
+	temp = Mat::ones( h - 2, w - 2, CV_64FC1);
+	temp *= 2;
+	roimat = M( Rect( 1, 1, w - 2, h - 2) );
+	temp.copyTo(roimat);
+
+	for(int i = 0; i < h; i++){
+		for(int j = 0; j < w; j++){
+			int label = get_ind(i, j, w);
+			if( M.at<double>(i, j) == 0 || M.at<double>(i, j) == 1){
+				A.at<double>( label, label ) = 1;
+			}
+			else{
+				A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
+				A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
+				A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
+				A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
+			}
+		}
+	}
+}
+
+void  compute_lap(Mat &img, Mat &ans){
+	int scale = 1;
+	int delta = 0;
+	int ddepth = CV_16S;
+	Mat img_blur,gradX, gradY, gradXabs, gradYabs, lapX, lapY;
+	GaussianBlur( img, img_blur, Size(3,3), 0, 0, BORDER_DEFAULT );
+	Sobel( img_blur, gradX, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );	
+	Sobel( img_blur, gradY, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );	
+	//Scharr( img_blur, gradX, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );	
+	//Scharr( img_blur, gradY, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );	
+	convertScaleAbs( gradX, gradXabs );
+	convertScaleAbs( gradY, gradYabs );
+	
+	Mat kx = Mat::zeros(1, 3, CV_8S);
+	kx.at<char>(0,0) = -1;
+	kx.at<char>(0,1) = 1;
+	filter2D( gradXabs, lapX, CV_32F, kx );
+
+	Mat ky = Mat::zeros(1, 3, CV_8S);
+	ky.at<char>(0,0) = -1;
+	ky.at<char>(1,0) = 1;
+	filter2D( gradYabs, lapY, CV_32F, ky );
+
+	ans = lapX + lapY;
+}
+
+/* Compute matrix b for Ax = b
+ * img_front : front img
+ * img_back : background img
+ * roi : roi of front
+ * pt : anchor of background
+ * B : result
+ */
 void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B){
 	Mat Lap;
 	int rh = roi.height;
@@ -90,14 +214,15 @@ void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B){
 	lk.at<double>( 1, 2 ) = 1.0;
 	lk.at<double>( 2, 1 ) = 1.0;
 	lk.at<double>( 1, 1 ) = -4.0;
-
 	B = Mat::zeros( rh * rw, 1, CV_64FC1);
-	cout << "start B" << endl;
+	//get Lap matrix
 	filter2D( img_front, Lap, -1, lk);
+	//compute_lap( img_front, Lap );
 	for(int i = 0; i < rh; i++){
 		for( int j = 0; j < rw; j++){
 			double tmp = 0.0;
 			tmp += Lap.at<double>( (i + roi.y ), ( j + roi.x ) );
+			//border lap value should substract background pixel value
 			if( i == 0 ) tmp -= img_back.at<double>( i - 1 + pt.y, j + pt.x );
 			else if( i == rh - 1) tmp -= img_back.at<double>( i + 1 + pt.y, j + pt.x );
 			if( j == 0 ) tmp -= img_back.at<double>( i + pt.y, j - 1 + pt.x );
@@ -105,164 +230,162 @@ void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B){
 			B.at<double>( get_ind( i, j, rw ), 0) = tmp;
 		}
 	}
-	cout << "end B" << endl;
 }
 
+/* Solve for Ax = b
+ * A : matrix A, (width*height)x(width*height)
+ * B : matrix b, (wight*height)x1
+ * h : img height
+ */
 Mat get_result(Mat &A, Mat &B, int h){
 	Mat ans;
-	cout << "start solve" << endl;
-	solve(A, B, ans);
-	cout << "end solve" << endl;
+	long start, end;
+	start = time(NULL);
+	//2500x2500 about 10s
+	solve( A, B, ans, DECOMP_LU );
+	//2500x2500 about 46s
+	//Mat A_inv;
+	//invert( A, A_inv, DECOMP_LU );
+	//ans = A_inv * B;
+	end = time(NULL);
+	cout << "\tSolve cost " << (end - start) * 1000 << " ms." << endl;
 	ans = ans.reshape(0, h);
 	return ans;
 }
 
+/*
+ * Poisson fusion
+ * img_front : front img
+ * img_back : background img
+ * roi : roi of front
+ * pt : anchor of background
+ * ans : result img
+ */
 void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 	int rh = roi.height;
 	int rw = roi.width;
 	Mat A, B;
+	long start, end;
 	getA( A, rh, rw);
+	print_mat_info(A,"A");
 	vector <Mat> rgb_f,rgb_b,result;
 	split(img_front, rgb_f);
 	split(img_back, rgb_b);
+	start = time(NULL);
 	for(int k = 0; k < 3; k++){
+		cout << " For rgb[" << k << "]..." << endl;
 		getB(rgb_f[k], rgb_b[k], roi, pt, B);	
 		result.push_back( get_result( A, B, rh ) );
 	}
+	end = time(NULL);
+	cout << " Poisson cost " << (end - start) * 1000 << " ms." << endl;
 	merge( result, ans );
 }
 
-void compute_gradient( const Mat &img, Mat &ans){
-	int scale = 1;
-	int delta = 0;
-	int ddepth = CV_16S;
-	Mat Ans_gray, grad, grad_x, grad_y, abs_grad_x, abs_grad_y;
-	GaussianBlur( img, img, Size(3,3), 0, 0, BORDER_DEFAULT );
-	//cvtColor( img, Ans_gray, CV_RGB2GRAY );
-	Sobel( img, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-	Sobel( img, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-	//Scharr( img, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
-	//Scharr( img, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
-	convertScaleAbs( grad_x, abs_grad_x );
-	convertScaleAbs( grad_y, abs_grad_y );
-	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, ans );
-	//addWeighted( grad_x, 0.5, grad_y, 0.5, 0, grad );
+/* 
+ * Check if the roi of img is valid
+ */
+bool valid_roi(const Mat& img, Rect roi){
+	if(	roi.x < 0 || roi.x >= img.cols ||
+		roi.y < 0 || roi.y >= img.rows ||
+		roi.x + roi.width > img.cols || 
+		roi.y + roi.height > img.rows ) return false;
+	else return true;
 }
 
-/* Simply replace the part of img obj with the part of img src
- * obj : object img
- * src : source img
- * x,y : object cordinate
- * sx,sy : source cordinate
- * w,h : part size
- * Return the fusion img
- */ 
-void simple_replace(const Mat& obj, int x, int y, const Mat &src, int sx, int sy, int w, int h, Mat& ans){
-	ans = obj.clone();
-	int c = src.channels();
-	int srow = src.rows;
-	int scol = src.cols;
-	int orow = obj.rows;
-	int ocol = obj.cols;
-	if(obj.channels() != src.channels()){
-		cout << "ERROR: obj and src channels not matched!" << endl;
+/*
+ * Handle for simple fusion and poisson edit, 
+ * put the f_roi of front to the b_roi of background
+ */
+void handle(const char* background_name, const char* front_name, Rect b_roi, Rect f_roi, const char* save_name ){
+	char fname[128];
+	Mat back, fron, roi_front, tmp;
+	back = imread( background_name, CV_LOAD_IMAGE_COLOR );
+	fron = imread( front_name, CV_LOAD_IMAGE_COLOR );
+	if ( !back.data || !fron.data ){
+		cout << "No Image Data!" << endl;
 		return;
 	}
-	if(	x < 0 || x >= obj.cols || 
-		y < 0 || y >= obj.rows ){
-		cout << "ERROR: obj location error!" << endl;
-		return;
+	// check if the roi valid
+	if ( !valid_roi( back, b_roi ) || !valid_roi( fron, f_roi ) ){
+		cout << "Invalid Roi In Image!" << endl;
 	}
-	if(	sx < 0 || sx >= src.cols ||
-		sy < 0 || sy >= src.rows ||
-		sx + w > src.cols ||
-		sy + h > src.rows){
-		cout << "ERROR: src location error!" << endl;
-		return ;
+	//the roi part should be same as background roi
+	Rect roi( 0, 0, b_roi.width, b_roi.height );
+	//rezie the front roi to the size of background roi, and get the matrix roi_front
+	fron( f_roi ).copyTo( roi_front );
+	resize( roi_front, roi_front, roi.size() );
+	print_mat_info( back, "background" );
+	print_mat_info( roi_front, "roi_front" );
+	//simple replace the background roi with the front roi
+	Mat smp_rep;
+	simple_replace( back, b_roi.tl(), roi_front, roi, smp_rep );
+	sprintf( fname, "simple_replace_%s.jpg", save_name );
+	imwrite( fname, smp_rep );
+	//poisson fusion
+	Mat res,in1, in2;
+	back.convertTo( in1, CV_64FC3 );
+	roi_front.convertTo( in2, CV_64FC3 );
+	poisson(in2, in1, roi, b_roi.tl(), res);
+	res.convertTo(res, CV_8UC1);
+	//copy the roi part to the background
+	Mat roimat = back( b_roi );
+	res.copyTo(roimat);
+	sprintf( fname, "poisson_%s.jpg", save_name );
+	imwrite( fname, back );
+	imshow( "poisson", back );
+} 
+
+void get_a(Mat &a, int w){
+	a = Mat::zeros( w, w, CV_64FC1 );
+	for(int i = 0; i < w; i++){
+		a.at<double>(i,i) = -4;
+		if(i > 0) a.at<double>(i,i-1) = 1;
+		if(i < w - 1) a.at<double>(i,i+1) = 1;
 	}
-	for(int i = y; i < y + h && i < orow; i++){
-		for(int j = x; j < x + w && j < ocol; j++){
-			for(int k = 0; k < c; k++){
-				ans.at<Vec3b>(i,j)[k] = src.at<Vec3b>(i-y+sy,j-x+sx)[k];
-			}
+}
+
+void print_float_mat(Mat m){
+	cout << "[" << endl;
+	for(int i = 0; i < m.rows; i++) {
+		for( int j = 0; j < m.cols; j++){
+			double x = m.at<double>(i,j);
+			if((x>0 && x<0.0001)||(x<0 && x>-0.0001)) cout << "0, ";
+			else cout << setprecision(2) << x << ", ";	
 		}
+		cout << ";" << endl;
 	}
+	cout << "]" << endl;
+
 }
 
 int main (int argc, char **argv)
-{
-	Mat img1,img2;
-	img1 = imread("fg.jpg", CV_LOAD_IMAGE_COLOR );
-	img2 = imread("fg.jpg", CV_LOAD_IMAGE_COLOR );
-	
-	if (!img1.data || !img2.data) {
-		cout << "No image data\n";
-		return -1;
-	}
-	
-	print_mat_info(img1);
-	print_mat_info(img2);
-
-	int x = 97;
-	int y = 257;
-	int sx = 25;
-	int sy = 260;
-	int w = 30;
-	int h = 45;
-	Mat Ans;
-        simple_replace(img1, x, y, img2, sx, sy, w, h, Ans);
-	imwrite("simple_fusion.jpg",Ans);
-	imshow("simple_fusion", Ans);
-	//Mat grad;
-	//compute_gradient(Ans,grad);
-	//print_mat_info(grad);
-	//imshow("Ans2", grad);
-	
-	//Mat grad_b,grad_f,grad_fusion,grad_lap;
-	//compute_gradient(img1, grad_b);
-	//compute_gradient(img2, grad_f);
-	//imshow("grad_b",grad_b);
-	//imshow("grad_f",grad_f);
-	//simple_replace(grad_b, x, y, grad_f, sx, sy, w, h, grad_fusion);
-	//print_mat_info(grad_fusion);
-	//imshow("grad_fusion",grad_fusion);
-
-	//imshow("img1",img1);
-	//compute_laplacian(grad_fusion, grad_lap);
-	//Laplacian(grad_fusion, grad_lap,grad_fusion.depth());
-	//print_mat_info(grad_lap);
-	//imshow("grad_lap", grad_lap);
+{	
+	Rect b_roi, f_roi;
 	/*
-	vector<Mat> img_chan; 
-	vector<Mat> lap_chan; 
-	
-       	split(img1, img_chan);
-	split(grad_lap, lap_chan);
-	
-	for(int k = 0; k < 3; k++){
-		solve(img_chan[k], lap_chan[k], img_chan[k]);
-	}	
-	
-	Mat result;
-	merge(img_chan, result);
-	imshow("result",result);	
+	b_roi = Rect( 93, 44, 52, 51 );
+	f_roi = Rect( 0, 0, 62, 62 );
+	handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );
 	*/
-	//Mat A;
-	//getA( A, 20, 30);
-	Mat res,in1, in2;
-	img1.convertTo( in1, CV_64FC3 );
-	img2.convertTo( in2, CV_64FC3 );
-	poisson(in2, in1, Rect(sx, sy, w, h), Point(x, y), res);
-	res.convertTo(res, CV_8UC1);
-	Mat roimat = img1( Rect( x, y, w, h ) );
-
-
-	res.copyTo(roimat);
-
-	//imshow("roi",res);
-	imshow("res",img1);
-	imwrite("poisson.jpg",img1);
-		
+	/*	
+	b_roi = Rect( 800, 150, 50, 50);
+	f_roi = Rect( 160, 40, 110, 110);
+	handle("img/mountains.JPG", "img/moon.JPG", b_roi, f_roi, "moon");
+	*/
+	/*
+	Mat A, A_inv, a, a_inv;
+	int h = 2, w = 3;
+	getA(A, h, w);
+	get_a(a, w);
+	invert(A, A_inv);
+	invert(a, a_inv, DECOMP_LU);
+	print_float_mat(a);
+	print_float_mat(a_inv);
+	print_float_mat(a*a_inv);
+	print_float_mat(A);
+	print_float_mat(A_inv);
+	print_float_mat(A*A_inv);
+	*/
 	waitKey(0);
 	return 0;
 }
