@@ -1,9 +1,12 @@
-#include<stdio.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
-#include<iomanip>
+#include <iomanip>
+#include <math.h>
+
 using namespace cv;
 using namespace std;
 
@@ -345,19 +348,52 @@ void get_a(Mat &a, int w){
 	}
 }
 
+double cal_a_det(int n){
+	double sq3, x1, x2, y1, y2, res;
+	sq3 = sqrt(3);
+	x1 = 2 + ( 7.0 / 6 ) * sq3;
+	x2 = 2 - ( 7.0 / 6 ) * sq3;
+	y1 = -2 - sq3;
+	y2 = -2 + sq3;
+	//cout << x1 << " " << x2 << " " << y1 << " " << y2 << endl;
+	res = x1 * pow( y1, n - 1 ) + x2 * pow( y2, n - 1 );
+	res = -res;
+	return res;	
+}
+
 void print_float_mat(Mat m){
 	cout << "[" << endl;
 	for(int i = 0; i < m.rows; i++) {
 		for( int j = 0; j < m.cols; j++){
 			double x = m.at<double>(i,j);
-			if((x>0 && x<0.0001)||(x<0 && x>-0.0001)) cout << "0, ";
-			else cout << setprecision(2) << x << ", ";	
+			if((x == 0.0)||(x>0 && x<0.0001)||(x<0 && x>-0.0001)) cout << "0, ";
+			//else cout << setprecision(10) << (x*abs(cal_a_det(m.rows))) << ", ";	
+			else cout << setprecision(5) << (int)(1/x) << ", ";	
 		}
 		cout << ";" << endl;
 	}
 	cout << "]" << endl;
 
 }
+
+
+void cal_a_inv(int n, Mat &ans){
+	ans = Mat::zeros( n, n, CV_64FC1 );
+	double fac[10000];
+	for( int i = 0; i <= n; i++ ) fac[i] = abs( cal_a_det(i) );
+	for ( int i = 0; i < n; i++ ){
+		for ( int j = i; j < n; j++ ){
+			ans.at<double>(i,j) = - fac[i] * fac[n-j-1] / fac[n];
+		}
+	}
+		
+	
+	for( int i = 0; i < n; i++ ){
+		for( int j = i + 1; j < n; j++) ans.at<double>(j,i) = ans.at<double>(i,j);
+	}
+	//return ans;
+}
+
 
 int main (int argc, char **argv)
 {	
@@ -373,18 +409,32 @@ int main (int argc, char **argv)
 	handle("img/mountains.JPG", "img/moon.JPG", b_roi, f_roi, "moon");
 	*/
 	/*
-	Mat A, A_inv, a, a_inv;
-	int h = 2, w = 3;
+	for(int i = 1; i <= 10 ; i++) cout << cal_a_det(i) << " ";
+	cout << endl;
+
+	Mat A, A_inv, a, a_inv, ans;
+	int h = atoi(argv[1]), w = atoi(argv[2]);
 	getA(A, h, w);
 	get_a(a, w);
 	invert(A, A_inv);
-	invert(a, a_inv, DECOMP_LU);
-	print_float_mat(a);
-	print_float_mat(a_inv);
-	print_float_mat(a*a_inv);
-	print_float_mat(A);
 	print_float_mat(A_inv);
-	print_float_mat(A*A_inv);
+	//cout << (a * a) << endl;
+	
+	//invert(a, a_inv, DECOMP_LU);
+	//cal_a_inv(a.cols, ans); 
+	//cout << ans << endl;
+	//cout << a << endl;
+	//cout << A << endl;
+	//cout << determinant(a) << endl;
+	//cout << cal_a_det(a.cols) << endl;
+	
+	
+	//print_float_mat(a_inv);
+	//print_float_mat(ans);
+	//print_float_mat(a*a_inv);
+	//print_float_mat(ans*a);
+	//print_float_mat(A_inv);
+	//print_float_mat(A*A_inv);
 	*/
 	waitKey(0);
 	return 0;
