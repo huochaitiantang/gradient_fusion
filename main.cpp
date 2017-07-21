@@ -8,7 +8,7 @@ int main (int argc, char **argv)
 {	
 	Rect b_roi, f_roi;
 	
-	/*
+	/*	
 	b_roi = Rect( 93, 44, 52, 51 );
 	f_roi = Rect( 0, 0, 62, 62 );
 	//sys_handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );

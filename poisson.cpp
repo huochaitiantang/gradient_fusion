@@ -14,64 +14,42 @@ int get_ind(int i, int j, int w){
  * w : img width
  */
 void  getA(Mat &A, int h, int w){
-	Mat M, temp, roimat;
 	A = Mat::eye( h * w, h * w, CV_64FC1);
 	A *= -4;
-	M = Mat::zeros( h, w, CV_64FC1);
 
-	temp = Mat::ones( h, w - 2, CV_64FC1);
-	roimat = M( Rect( 1, 0, w - 2, h) );
-	temp.copyTo(roimat);
-
-	temp = Mat::ones( h - 2, w, CV_64FC1);
-	roimat = M( Rect( 0, 1, w, h - 2) );
-	temp.copyTo(roimat);
-	
-	temp = Mat::ones( h - 2, w - 2, CV_64FC1);
-	temp *= 2;
-	roimat = M( Rect( 1, 1, w - 2, h - 2) );
-	temp.copyTo(roimat);
 	//corner has 2 neighbors, border has 3 neighbors, other has 4 neighbors
 	for(int i = 0; i < h; i++){
 		for(int j = 0; j < w; j++){
 			int label = get_ind(i, j, w);
-			if( M.at<double>(i, j) == 0){
-				if( i == 0 ) A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
-				else if( i == h - 1 ) A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
-				if( j == 0 ) A.at<double>( get_ind( i, j + 1, w), label ) = 1;
-				else if( j = w - 1 ) A.at<double>( get_ind( i, j - 1, w), label ) = 1;
-			}
-			else if( M.at<double>(i, j) == 1){
-				if( i == 0 ){
-					A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
-					A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
-					A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
-				}
-				else if( i == h - 1 ){
-					A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
-					A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
-					A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
-				}
-				if( j == 0 ){
-					A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
-					A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
-					A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
-				}
-				else if( j == w - 1 ){
-					A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
-					A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
-					A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
-				}
-			}
-			else{
-				A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
-				A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
-				A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
-				A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
-			}
+			if ( i > 0 ) A.at<double>( get_ind( i - 1, j, w ), label ) = 1;
+			if ( j > 0 ) A.at<double>( get_ind( i, j - 1, w ), label ) = 1;
+			if ( i < h - 1 ) A.at<double>( get_ind( i + 1, j, w ), label ) = 1;
+			if ( j < w - 1 ) A.at<double>( get_ind( i, j + 1, w ), label ) = 1;
 		}
 	}
 }
+
+/* Get the sparse matrix A in Ax = b
+ * A : result
+ * h : img height
+ * w : img width
+ */
+vector< vector< int > >  get_sparseA(int h, int w){
+	vector< vector< int > > ans;
+	//corner has 2 neighbors, border has 3 neighbors, other has 4 neighbors
+	for(int i = 0; i < h; i++){
+		for(int j = 0; j < w; j++){
+			vector<int> ind;
+			if ( i > 0 ) ind.push_back( get_ind( i - 1, j, w ) );
+			if ( j > 0 ) ind.push_back( get_ind( i, j - 1, w ) );
+			if ( i < h - 1 ) ind.push_back( get_ind( i + 1, j, w ) );
+			if ( j < w - 1 ) ind.push_back( get_ind( i, j + 1, w ) );
+ 			ans.push_back(ind);
+		}
+	}
+	return ans;
+}
+
 
 /* Compute matrix b for Ax = b
  * img_front : front img
@@ -121,7 +99,7 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 	int rw = roi.width;
 	Mat A, B;
 	long start, end;
-//	getA( A, rh, rw);
+	//getA( A, rh, rw);
 	print_mat_info(A,"A");
 	vector <Mat> rgb_f,rgb_b,result;
 	split(img_front, rgb_f);
@@ -150,12 +128,12 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 	//	cout << "\tSolve_FR cost " << (t3 - t2) * 1000 << " ms.\n" << endl;
 		
 		solve_FR_SparseA(rw, rh, B, ans3, delta );
-		//cout << " A * ans3 : \n" << (A*ans3) << endl;
+	//	cout << " A * ans3 : \n" << (A*ans3) << endl;
 		long t4 = time(NULL);
 		cout << "\tSolve_FR_Sparse cost " << (t4 - t3) * 1000 << " ms.\n" << endl;
 		
 		
-		//ans = ans.reshape(0, rh);
+	//	ans = ans.reshape(0, rh);
 		//ans2 = ans2.reshape(0, rh);
 		ans3 = ans3.reshape(0, rh);
 		result.push_back( ans3 );

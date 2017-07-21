@@ -13,22 +13,23 @@ using namespace cv;
 using namespace std;
 
 //lmath.cpp
-extern void get_a(Mat &a, int w);
-extern double cal_a_det(int n);
-extern void print_float_mat(Mat m);
-extern void cal_a_inv(int n, Mat &ans);
-extern bool less_than( Mat &x, Mat &y );
-extern void solve_FR( Mat &A, Mat &b, Mat &ans, double delta );
+void get_a(Mat &a, int w);
+double cal_a_det(int n);
+void print_float_mat(Mat m);
+void cal_a_inv(int n, Mat &ans);
+bool less_than( Mat &x, Mat &y );
+void solve_FR( Mat &A, Mat &b, Mat &ans, double delta );
 Mat cal_Ap( int rw, int rh, Mat &p );
 void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta );
 
 //poisson.cpp
-extern int get_ind(int i, int j, int w);
-extern void getA(Mat &A, int h, int w);
-extern void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B);
-extern void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans);
+int get_ind(int i, int j, int w);
+void getA(Mat &A, int h, int w);
+vector< vector< int > >  get_sparseA(int h, int w);
+void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B);
+void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans);
 
 //tools.cpp
-extern int print_mat_info(Mat mat, const char* s);
-extern void simple_replace(const Mat& obj, Point pt, const Mat &src, Rect roi, Mat& ans);
-extern bool valid_roi(const Mat& img, Rect roi);
+int print_mat_info(Mat mat, const char* s);
+void simple_replace(const Mat& obj, Point pt, const Mat &src, Rect roi, Mat& ans);
+bool valid_roi(const Mat& img, Rect roi);

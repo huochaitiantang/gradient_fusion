@@ -118,12 +118,23 @@ void solve_FR( Mat &A, Mat &b, Mat &ans, double delta ){
 	x.copyTo(ans);
 }
 
+/* calculate for a*p
+ */
+Mat cal_ap( int rw, Mat &p ){
+	Mat ans = Mat::zeros( rw, 1, CV_64FC1 );
+	ans.at<double>(0,0) = -4 * p.at<double>(0,0) + p.at<double>(1,0);
+	for( int i = 0; i < rw -1; i++ )
+		ans.at<double>(i,0) = -4 * p.at<double>(i,0) + p.at<double>(i-1,0) + p.at<double>(i+1,0);
+	ans.at<double>(rw-1,0) = -4 * p.at<double>(rw-1,0) + p.at<double>(rw-2,0);
+	return ans;
+}
+
 /* calculate for A*p
  * A like 
  * a i o o o,
  * i a i o o,
  * o i a i 0,
- * o o i a i,
+* o o i a i,
  * o o o i a,
  * i,a : size(w,w)
  * p : size(w*h,1)
@@ -133,17 +144,20 @@ Mat cal_Ap( int rw, int rh, Mat &p ){
 	Mat a,ans;
 	vector<Mat> P;
 	vector<Mat> ANS;	
-	get_a( a, rw );
+	//get_a( a, rw );
 	for( int i = 0; i < rh; i++ ){
 		Mat tmp;
 		p( Rect( 0 , rw * i , 1, rw ) ).copyTo(tmp);
 		P.push_back(tmp);
 	}
-	ANS.push_back( a * P[0] + P[1] );
+	//ANS.push_back( a * P[0] + P[1] );
+	ANS.push_back( cal_ap( rw, P[0] ) + P[1] );
 	for( int i = 1; i < rh - 1; i++ ){
-		ANS.push_back( P[i-1] + a * P[i] + P[i+1] );
+		//ANS.push_back( P[i-1] + a * P[i] + P[i+1] );
+		ANS.push_back( P[i-1] + cal_ap( rw, P[i] ) + P[i+1] );
 	}
-	ANS.push_back( P[rh-2] + a * P[rh-1] );
+	//ANS.push_back( P[rh-2] + a * P[rh-1] );
+	ANS.push_back( P[rh-2] + cal_ap( rw, P[rh-1] ) );
 	int k = 0;
 	ans = Mat::zeros( rw * rh, 1, CV_64FC1 );
 	for( int i = 0; i < rh; i++ ){
@@ -151,6 +165,20 @@ Mat cal_Ap( int rw, int rh, Mat &p ){
 			ans.at<double>(k,0) = ANS[i].at<double>(j,0);
 			k++;
 		}		
+	}
+	return ans;
+}
+
+
+/* slower than cal_Ap */
+Mat cal_Ap2( vector< vector< int > > A, Mat &p ){
+	Mat ans = Mat::zeros( A.size(), 1, CV_64FC1 );
+	for(int i = 0; i < A.size(); i++ ){
+		double tmp = -4 * p.at<double>(i,0);
+		for(int j = 0; j < A[i].size(); j++ ){
+			tmp += p.at<double>( A[i][j], 0 );
+		}
+		ans.at<double>(i,0) = tmp;
 	}
 	return ans;
 }
@@ -168,6 +196,7 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 		return;
 	}
 	int k = 0, h = b.rows;
+	vector< vector < int > > A = get_sparseA( rh, rw );
 	Mat del = Mat::ones( h, 1, CV_64FC1 );
 	del *= delta;
 	Mat tmp;
@@ -185,7 +214,8 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 		else{
 			p = ( r + ( rTr_1 / rTr_2 ) * p );
 		}
-		Mat Ap = cal_Ap( rw, rh, p);	
+		Mat Ap = cal_Ap( rw, rh, p);
+		//Mat Ap = cal_Ap2( A, p);
 		tmp = p.t() * Ap;
 		alpha = rTr_1 / tmp.at<double>(0.0);
 		x = ( x + alpha * p );
