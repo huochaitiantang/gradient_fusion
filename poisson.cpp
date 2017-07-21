@@ -109,7 +109,7 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 		cout << " For rgb[" << k << "]..." << endl;
 		getB(rgb_f[k], rgb_b[k], roi, pt, B);	
 
-		Mat ans,ans2,ans3;
+		Mat ans,ans2,ans3,ans4;
 		
 		//cout << "B : \n" << B << endl;	
 		
@@ -126,17 +126,31 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 		//cout << " A * ans2 : \n" << (A*ans2) << endl;
 		long t3 = time(NULL);
 	//	cout << "\tSolve_FR cost " << (t3 - t2) * 1000 << " ms.\n" << endl;
+	
+		
+		
+		
+		
 		
 		solve_FR_SparseA(rw, rh, B, ans3, delta );
+		cout << " ans3: \n " << ans3 << endl;
 	//	cout << " A * ans3 : \n" << (A*ans3) << endl;
 		long t4 = time(NULL);
 		cout << "\tSolve_FR_Sparse cost " << (t4 - t3) * 1000 << " ms.\n" << endl;
+		
+		Mat mod_diff, mod_img;
+		mod_diff = B.reshape(0, rh).clone();
+		//cout << "mod_diff: \n" << mod_diff << endl;
+		rgb_b[k]( Rect ( pt.x, pt.y, roi.width, roi.height ) ).copyTo(mod_img);
+		//cout << "mod_img: \n" << mod_img << endl;
+		solve_dft(mod_img, mod_diff, ans4 );
+		cout << " ans4: \n " << ans4 << endl;
 		
 		
 	//	ans = ans.reshape(0, rh);
 		//ans2 = ans2.reshape(0, rh);
 		ans3 = ans3.reshape(0, rh);
-		result.push_back( ans3 );
+		result.push_back( ans4 );
 	}
 	end = time(NULL);
 	cout << " Poisson cost " << (end - start) * 1000 << " ms." << endl;

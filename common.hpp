@@ -4,10 +4,14 @@
 #include <iomanip>
 #include <math.h>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/highgui/highgui.hpp>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/photo.hpp>
 
 using namespace cv;
 using namespace std;
@@ -33,3 +37,8 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans);
 int print_mat_info(Mat mat, const char* s);
 void simple_replace(const Mat& obj, Point pt, const Mat &src, Rect roi, Mat& ans);
 bool valid_roi(const Mat& img, Rect roi);
+
+//test.cpp
+void dst(const Mat& src, Mat& dest, bool invert = false);
+void idst(const Mat& src, Mat& dest);
+void solve_dft(const Mat &img, Mat& mod_diff, Mat &result);

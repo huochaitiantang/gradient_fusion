@@ -8,18 +8,19 @@ int main (int argc, char **argv)
 {	
 	Rect b_roi, f_roi;
 	
-	/*	
-	b_roi = Rect( 93, 44, 52, 51 );
+			
+	b_roi = Rect( 93, 44, 4, 4 );
 	f_roi = Rect( 0, 0, 62, 62 );
 	//sys_handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );
 	handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );
-	*/
 	
 	
+	/*	
 	b_roi = Rect( 495, 266, 223, 223);
 	f_roi = Rect( 0, 0, 185, 185);
-	handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
-	
+	sys_handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
+	//handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
+	*/
 	/*
 	b_roi = Rect( 800, 150, 150, 150);
 	f_roi = Rect( 160, 40, 110, 110);
@@ -107,18 +108,23 @@ void sys_handle(const char* background_name, const char* front_name, Rect b_roi,
 	Mat mask = 255 * Mat::ones( roi_front.rows, roi_front.cols, roi_front.depth() );
 	Mat sys_normal, sys_mixed;
 	
+	Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
+	
 	long t1 = time(NULL);
-	//seamlesssClone( roi_front, back, mask, b_roi.tl(), sys_normal, NORMAL_CLONE );
+	cout << b_roi.tl();
+	seamlessClone( roi_front, back, mask, center, sys_normal, NORMAL_CLONE );
 	long t2 = time(NULL);
 	cout << " System normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-	//seamlesssClone( roi_front, back, mask, b_roi.tl(), sys_mixed, MIXED_CLONE );
+	
+	seamlessClone( roi_front, back, mask, center, sys_mixed, MIXED_CLONE );
 	long t3 = time(NULL);
 	cout << " System mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
 	
 	sprintf( fname, "sys_normal_poisson_%s.jpg", save_name );
 	imwrite( fname, sys_normal );
+	imshow( "sys_poisson_normal", sys_normal);
 	
 	sprintf( fname, "sys_mixed_poisson_%s.jpg", save_name );
 	imwrite( fname, sys_mixed );
-
+	imshow( "sys_poisson_mixed", sys_mixed);
 }
