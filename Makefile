@@ -3,6 +3,9 @@ TARGET = main
 INCLUDE_DIRS+=-I/home/sensetime/libs/include
 LD_LIBRARIE_DIRS+=-L/home/sensetime/libs/lib
 
+INCLUDE_DIRS+=-I/home/liuliang/opencv3.2/include
+LD_LIBRARIE_DIRS+=-L/home/liuliang/opencv3.2/lib
+
 #SRCS = main.cpp lmath.cpp tools.cpp poisson.cpp
 
 SRCS:=$(wildcard *.cpp)
