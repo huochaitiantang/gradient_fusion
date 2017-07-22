@@ -1,5 +1,7 @@
 #include "common.hpp"
 
+char SAVE_PATH [] = "img";
+
 void handle(const char* background_name, const char* front_name, Rect b_roi, Rect f_roi, const char* save_name );
 
 void sys_handle(const char* background_name, const char* front_name, Rect b_roi, Rect f_roi, const char* save_name );
@@ -7,25 +9,25 @@ void sys_handle(const char* background_name, const char* front_name, Rect b_roi,
 int main (int argc, char **argv)
 {	
 	Rect b_roi, f_roi;
-	
+		
 			
-	b_roi = Rect( 93, 44, 4, 4 );
+	b_roi = Rect( 93, 44, 52, 51 );
 	f_roi = Rect( 0, 0, 62, 62 );
 	//sys_handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );
 	handle("img/1_ori.jpg", "img/1.jpg", b_roi, f_roi, "1" );
 	
 	
-	/*	
+		
 	b_roi = Rect( 495, 266, 223, 223);
 	f_roi = Rect( 0, 0, 185, 185);
-	sys_handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
-	//handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
-	*/
-	/*
-	b_roi = Rect( 800, 150, 150, 150);
-	f_roi = Rect( 160, 40, 110, 110);
+	//sys_handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
+	handle("img/0_ori.jpg", "img/0.jpg", b_roi, f_roi, "0");
+	
+	
+	b_roi = Rect( 800, 150, 200, 200);
+	f_roi = Rect( 160, 40, 200, 200);
 	handle("img/mountains.JPG", "img/moon.JPG", b_roi, f_roi, "moon");
-	*/
+	
 	
 	waitKey(0);
 	return 0;
@@ -47,6 +49,7 @@ void handle(const char* background_name, const char* front_name, Rect b_roi, Rec
 	// check if the roi valid
 	if ( !valid_roi( back, b_roi ) || !valid_roi( fron, f_roi ) ){
 		cout << "Invalid Roi In Image!" << endl;
+		return;
 	}
 	//the roi part should be same as background roi
 	Rect roi( 0, 0, b_roi.width, b_roi.height );
@@ -58,7 +61,7 @@ void handle(const char* background_name, const char* front_name, Rect b_roi, Rec
 	//simple replace the background roi with the front roi
 	Mat smp_rep;
 	simple_replace( back, b_roi.tl(), roi_front, roi, smp_rep );
-	sprintf( fname, "simple_replace_%s.jpg", save_name );
+	sprintf( fname, "%s/simple_replace_%s.jpg", SAVE_PATH,save_name );
 	imwrite( fname, smp_rep );
 	//poisson fusion
 	Mat res,in1, in2;
@@ -69,7 +72,7 @@ void handle(const char* background_name, const char* front_name, Rect b_roi, Rec
 	//copy the roi part to the background
 	Mat roimat = back( b_roi );
 	res.copyTo(roimat);
-	sprintf( fname, "poisson_%s.jpg", save_name );
+	sprintf( fname, "%s/poisson_%s.jpg", SAVE_PATH, save_name );
 	imwrite( fname, back );
 	imshow( "poisson", back );
 }
@@ -90,6 +93,7 @@ void sys_handle(const char* background_name, const char* front_name, Rect b_roi,
 	// check if the roi valid
 	if ( !valid_roi( back, b_roi ) || !valid_roi( fron, f_roi ) ){
 		cout << "Invalid Roi In Image!" << endl;
+		return;
 	}
 	//the roi part should be same as background roi
 	Rect roi( 0, 0, b_roi.width, b_roi.height );
@@ -111,7 +115,7 @@ void sys_handle(const char* background_name, const char* front_name, Rect b_roi,
 	Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
 	
 	long t1 = time(NULL);
-	cout << b_roi.tl();
+	//cout << b_roi.tl();
 	seamlessClone( roi_front, back, mask, center, sys_normal, NORMAL_CLONE );
 	long t2 = time(NULL);
 	cout << " System normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
@@ -120,11 +124,11 @@ void sys_handle(const char* background_name, const char* front_name, Rect b_roi,
 	long t3 = time(NULL);
 	cout << " System mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
 	
-	sprintf( fname, "sys_normal_poisson_%s.jpg", save_name );
+	sprintf( fname, "%s/sys_normal_poisson_%s.jpg", SAVE_PATH, save_name );
 	imwrite( fname, sys_normal );
 	imshow( "sys_poisson_normal", sys_normal);
 	
-	sprintf( fname, "sys_mixed_poisson_%s.jpg", save_name );
+	sprintf( fname, "%s/sys_mixed_poisson_%s.jpg", SAVE_PATH, save_name );
 	imwrite( fname, sys_mixed );
 	imshow( "sys_poisson_mixed", sys_mixed);
 }

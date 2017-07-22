@@ -12,9 +12,10 @@
 void get_a(Mat &a, int w){
 	a = Mat::zeros( w, w, CV_64FC1 );
 	for(int i = 0; i < w; i++){
-		a.at<double>(i,i) = -4;
-		if(i > 0) a.at<double>(i,i-1) = 1;
-		if(i < w - 1) a.at<double>(i,i+1) = 1;
+		double * aLinePtr = a.ptr<double>(i);	
+		aLinePtr[i] = -4;
+		if(i > 0) aLinePtr[i-1] = 1;
+		if(i < w - 1) aLinePtr[i+1] = 1;
 	}
 }
 
@@ -70,8 +71,10 @@ void cal_a_inv(int n, Mat &ans){
 /* judge if x < y */
 bool less_than( Mat &x, Mat &y ){
 	int h = std::min( x.rows, y.cols );
+	double * xPtr = x.ptr<double>();
+	double * yPtr = y.ptr<double>();
 	for( int i = 0; i < h; i++ ){
-		if( abs(x.at<double>(i,0)) > y.at<double>(i,0) ) return false;
+		if( abs(xPtr[i]) > yPtr[i] ) return false;
 	}
 	return true;
 }
@@ -106,7 +109,7 @@ void solve_FR( Mat &A, Mat &b, Mat &ans, double delta ){
 		}
 		Mat Ap = A * p;	
 		tmp = p.t() * Ap;
-		alpha = rTr_1 / tmp.at<double>(0.0);
+		alpha = rTr_1 / tmp.at<double>(0,0);
 		x = ( x + alpha * p );
 		r = ( r - alpha * Ap );
 		
@@ -122,10 +125,12 @@ void solve_FR( Mat &A, Mat &b, Mat &ans, double delta ){
  */
 Mat cal_ap( int rw, Mat &p ){
 	Mat ans = Mat::zeros( rw, 1, CV_64FC1 );
-	ans.at<double>(0,0) = -4 * p.at<double>(0,0) + p.at<double>(1,0);
+	double * pPtr = p.ptr<double>();
+	double * ansPtr = ans.ptr<double>();	
+	ansPtr[0] = -4 * pPtr[0] + pPtr[1];
 	for( int i = 0; i < rw -1; i++ )
-		ans.at<double>(i,0) = -4 * p.at<double>(i,0) + p.at<double>(i-1,0) + p.at<double>(i+1,0);
-	ans.at<double>(rw-1,0) = -4 * p.at<double>(rw-1,0) + p.at<double>(rw-2,0);
+		ansPtr[i] = -4 * pPtr[i] + pPtr[i - 1] + pPtr[i + 1];
+	ansPtr[rw - 1] = -4 * pPtr[rw - 1] + pPtr[rw - 2];
 	return ans;
 }
 
@@ -160,10 +165,11 @@ Mat cal_Ap( int rw, int rh, Mat &p ){
 	ANS.push_back( P[rh-2] + cal_ap( rw, P[rh-1] ) );
 	int k = 0;
 	ans = Mat::zeros( rw * rh, 1, CV_64FC1 );
+	double * ansPtr = ans.ptr<double>();
 	for( int i = 0; i < rh; i++ ){
+		double * tmpPtr = ANS[i].ptr<double>();
 		for( int j = 0; j < rw; j++ ){
-			ans.at<double>(k,0) = ANS[i].at<double>(j,0);
-			k++;
+			ansPtr[k++] = tmpPtr[j];
 		}		
 	}
 	return ans;
@@ -173,12 +179,14 @@ Mat cal_Ap( int rw, int rh, Mat &p ){
 /* slower than cal_Ap */
 Mat cal_Ap2( vector< vector< int > > A, Mat &p ){
 	Mat ans = Mat::zeros( A.size(), 1, CV_64FC1 );
+	double * pPtr = p.ptr<double>();
+	double * ansPtr = ans.ptr<double>();	
 	for(int i = 0; i < A.size(); i++ ){
-		double tmp = -4 * p.at<double>(i,0);
+		double tmp = -4 * pPtr[i];
 		for(int j = 0; j < A[i].size(); j++ ){
-			tmp += p.at<double>( A[i][j], 0 );
+			tmp += pPtr[ A[i][j] ];
 		}
-		ans.at<double>(i,0) = tmp;
+		ansPtr[i] = tmp;
 	}
 	return ans;
 }
@@ -196,7 +204,7 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 		return;
 	}
 	int k = 0, h = b.rows;
-	vector< vector < int > > A = get_sparseA( rh, rw );
+	//vector< vector < int > > A = get_sparseA( rh, rw );
 	Mat del = Mat::ones( h, 1, CV_64FC1 );
 	del *= delta;
 	Mat tmp;
@@ -205,7 +213,7 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 	Mat r = b.clone();
 	double rTr_2, alpha;
 	tmp = r.t() * r ;
-	double rTr_1 = tmp.at<double>(0,0);
+	double rTr_1 = tmp.at<double>();
 	while( less_than( r , del ) == false ){
 		k++;
 		if( k == 1 ){
@@ -217,13 +225,13 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 		Mat Ap = cal_Ap( rw, rh, p);
 		//Mat Ap = cal_Ap2( A, p);
 		tmp = p.t() * Ap;
-		alpha = rTr_1 / tmp.at<double>(0.0);
+		alpha = rTr_1 / tmp.at<double>();
 		x = ( x + alpha * p );
 		r = ( r - alpha * Ap );
 		
 		rTr_2 = rTr_1;
 		tmp = r.t() * r;
-		rTr_1 = tmp.at<double>(0,0);
+		rTr_1 = tmp.at<double>();
 	}
 	cout << " solve FR_SpareA for step " << k << " ." << endl;
 	x.copyTo(ans);
