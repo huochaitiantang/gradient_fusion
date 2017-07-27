@@ -12,9 +12,12 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/photo.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 using namespace cv;
 using namespace std;
+
+//Mat tst = imread( "1_ori.jpg" , CV_LOAD_IMAGE_COLOR);
 
 //lmath.cpp
 void get_a(Mat &a, int w);
@@ -42,3 +45,6 @@ bool valid_roi(const Mat& img, Rect roi);
 void dst(const Mat& src, Mat& dest, bool invert = false);
 void idst(const Mat& src, Mat& dest);
 void solve_dft(const Mat &img, Mat& mod_diff, Mat &result);
+
+//api.cpp
+Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type);

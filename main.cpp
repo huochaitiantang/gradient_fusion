@@ -68,7 +68,7 @@ void handle(const char* background_name, const char* front_name, Rect b_roi, Rec
 	back.convertTo( in1, CV_64FC3 );
 	roi_front.convertTo( in2, CV_64FC3 );
 	poisson(in2, in1, roi, b_roi.tl(), res);
-	res.convertTo(res, CV_8UC1);
+	res.convertTo(res, CV_8UC3);
 	//copy the roi part to the background
 	Mat roimat = back( b_roi );
 	res.copyTo(roimat);

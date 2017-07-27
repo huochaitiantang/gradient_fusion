@@ -106,7 +106,7 @@ void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans){
 	split(img_front, rgb_f);
 	split(img_back, rgb_b);
 	start = time(NULL);
-	for(int k = 0; k < 3; k++){
+	for(int k = 0; k < img_back.channels(); k++){
 		cout << " For rgb[" << k << "]..." << endl;
 		getB(rgb_f[k], rgb_b[k], roi, pt, B);	
 
