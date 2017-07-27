@@ -11,7 +11,7 @@ Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type){
 		seamlessClone( front, back, mask, center, ans, NORMAL_CLONE );
 		long t2 = time(NULL);
 		cout << " Normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-		imshow("ans",ans);
+		//imshow("ans",ans);
 		return ans;
 	}
 	else if( type == 2 ){
@@ -22,7 +22,7 @@ Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type){
 		seamlessClone( front, back, mask, center, ans, MIXED_CLONE );
 		long t2 = time(NULL);
 		cout << " Mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-		imshow("ans",ans);
+		//imshow("ans",ans);
 		return  ans;
 	}
 	else{
