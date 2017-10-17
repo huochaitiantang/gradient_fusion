@@ -41,3 +41,29 @@ Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type){
 	}
 
 }
+
+Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rect b_roi, int type){
+	Mat ans = back.clone();
+	Rect roi = Rect(0, 0, b_roi.width, b_roi.height);
+	if( type == 1 ){
+		cout << " Opencv3.2 Normal Clone " << endl;
+		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
+		long t1 = time(NULL);
+		seamlessClone( front, back, mask, center, ans, NORMAL_CLONE );
+		long t2 = time(NULL);
+		cout << " Normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
+		return ans;
+	}
+	else if(type == 2){
+		cout << " Opencv3.2 Mixed Clone " << endl;
+		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
+		long t1 = time(NULL);
+		seamlessClone( front, back, mask, center, ans, MIXED_CLONE );
+		long t2 = time(NULL);
+		cout << " Mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
+	}
+	else{
+		return ans;
+	}
+
+}

@@ -48,3 +48,4 @@ void solve_dft(const Mat &img, Mat& mod_diff, Mat &result);
 
 //api.cpp
 Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type);
+Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rect b_roi, int type);
