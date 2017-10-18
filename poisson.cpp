@@ -188,10 +188,27 @@ void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt
 	vector <Mat> rgb_f,rgb_b,result;
 	split(img_front, rgb_f);
 	split(img_back, rgb_b);
-
+	vector<vector<int> > MapId;
+	vector<pair<int,int> > IdMap;
 	
+	//imshow("msk",mask);
+	cout << "rh:" << rh << " rw:" << rw << endl;
+	cout << "mask: rows:" << mask.rows << ", cols:" << mask.cols << endl;
+	getMaskMapTable(mask,roi,MapId,IdMap);
+	for(int i = 0; i < rh; i++){
+		for(int j = 0; j < rw; j++){
+			if(MapId[i][j] >= 0) cout << "*";
+			else cout << " ";	
+		}
+		cout << endl;
+	}
+	/*for(int i = 0; i < IdMap.size(); i++){
+		cout << i << " : [" << IdMap[i].first << "," << IdMap[i].second <<"]"<< endl;
+	}
+	*/
 	//start = time(NULL);
-	for(int k = 0; k < img_back.channels(); k++){
+	/*
+	 * for(int k = 0; k < img_back.channels(); k++){
 		cout << " For rgb[" << k << "]..." << endl;
 		//getB(rgb_f[k], rgb_b[k], roi, pt, B);	
 
@@ -206,13 +223,12 @@ void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt
 		//ans3 = ans.reshape(0, rh);
 		//result.push_back( ans3 );
 	}
+	*/
 	//end = time(NULL);
 	//cout << " Poisson cost " << (end - start) * 1000 << " ms." << endl;
 	//cout << " ------------------------------------------------------ \n" << endl;
 	//merge( result, ans );
-	ans = img_front;
-
-
-
+	//ans = img_front;
+	img_front.copyTo(ans);
 
 }

@@ -65,11 +65,15 @@ Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rec
 	else{
 		cout << " Poly FR Solver " << endl;
 		Mat res, in1, in2, msk;
-		print_mat_info( back, "background" );
-		print_mat_info( front, "roi_front" );
+		vector<Mat> msk_v;
 		back.convertTo(in1, CV_64FC3);
 		front.convertTo(in2, CV_64FC3);	
-		mask.convertTo(msk, CV_64FC1);
+		mask.convertTo(msk, CV_64FC3);
+		split(msk,msk_v);
+		msk = msk_v[0];
+		print_mat_info( in1, "background-new" );
+		print_mat_info( in2, "roi_front-new" );
+		print_mat_info( msk, "mask-new" );
 		polygonPoisson(in2, in1, msk, roi, b_roi.tl(), res);
 		print_mat_info( res, "poisson res" );
 		res.convertTo(res, CV_8UC3);
