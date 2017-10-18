@@ -63,6 +63,18 @@ Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rec
 		cout << " Mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
 	}
 	else{
+		cout << " Poly FR Solver " << endl;
+		Mat res, in1, in2, msk;
+		print_mat_info( back, "background" );
+		print_mat_info( front, "roi_front" );
+		back.convertTo(in1, CV_64FC3);
+		front.convertTo(in2, CV_64FC3);	
+		mask.convertTo(msk, CV_64FC1);
+		polygonPoisson(in2, in1, msk, roi, b_roi.tl(), res);
+		print_mat_info( res, "poisson res" );
+		res.convertTo(res, CV_8UC3);
+		Mat roimat = ans(b_roi);
+		res.copyTo(roimat);
 		return ans;
 	}
 

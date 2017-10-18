@@ -35,6 +35,9 @@ void getA(Mat &A, int h, int w);
 vector< vector< int > >  get_sparseA(int h, int w);
 void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B);
 void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans);
+void getMaskMapTable(Mat &Mask, Rect roi, vector<vector<int> > & MapId, vector<pair<int,int> > &IdMap); 
+void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt, Mat &ans);
+
 
 //tools.cpp
 int print_mat_info(Mat mat, const char* s);
