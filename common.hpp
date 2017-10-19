@@ -28,6 +28,7 @@ bool less_than( Mat &x, Mat &y );
 void solve_FR( Mat &A, Mat &b, Mat &ans, double delta );
 Mat cal_Ap( int rw, int rh, Mat &p );
 void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta );
+void solve_FR_PolySparseA( int rw, int rh, Mat &b, vector<vector<int> > &A, Mat &ans, double delta );
 
 //poisson.cpp
 int get_ind(int i, int j, int w);
@@ -37,7 +38,8 @@ void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B);
 void poisson(Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &ans);
 void getMaskMapTable(Mat &Mask, Rect roi, vector<vector<int> > & MapId, vector<pair<int,int> > &IdMap); 
 void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt, Mat &ans);
-
+void getPolyB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B, vector<vector<int> > &MapId, vector<pair<int,int> > &IdMap);
+vector<vector<int> > getPolySparseA( vector<vector<int> > &MapId, vector<pair<int,int> > &IdMap);
 
 //tools.cpp
 int print_mat_info(Mat mat, const char* s);

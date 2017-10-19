@@ -50,6 +50,35 @@ vector< vector< int > >  get_sparseA(int h, int w){
 	return ans;
 }
 
+vector<vector<int> > getPolySparseA( vector<vector<int> > &MapId, vector<pair<int,int> > &IdMap){
+	vector<vector<int> > ans;
+	int h = MapId.size();
+	int w = MapId[0].size();
+	for(int i = 0; i < IdMap.size(); i++){
+		vector<int> ind;
+		int x = IdMap[i].first;
+		int y = IdMap[i].second;
+		int cur;
+		if( x > 0){
+			cur = MapId[x-1][y];
+			if(cur >= 0) ind.push_back(cur);
+		}
+		if( y > 0){
+			cur = MapId[x][y-1];
+			if(cur >= 0) ind.push_back(cur);
+		}
+		if( x < h -1){
+			cur = MapId[x+1][y];
+			if(cur >= 0) ind.push_back(cur);
+		}
+		if( y < w - 1){
+			 cur = MapId[x][y+1];
+			if(cur >= 0) ind.push_back(cur);
+		}
+		ans.push_back(ind);
+	}
+	return ans;
+}
 
 /* Compute matrix b for Ax = b
  * img_front : front img
@@ -78,15 +107,67 @@ void getB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B){
 			double tmp = 0.0;
 			tmp += Lap.at<double>( (i + roi.y ), ( j + roi.x ) );
 			//border lap value should substract background pixel value
-			if( i == 0 ) tmp -= img_back.at<double>( i - 1 + pt.y, j + pt.x );
-			else if( i == rh - 1) tmp -= img_back.at<double>( i + 1 + pt.y, j + pt.x );
-			if( j == 0 ) tmp -= img_back.at<double>( i + pt.y, j - 1 + pt.x );
-			else if( j == rw - 1) tmp -= img_back.at<double>( i + pt.y, j + 1 + pt.x );
+			if( i == 0){ 
+				int cur = max(i - 1 + pt.y, 0);
+				tmp -= img_back.at<double>(cur, j + pt.x );
+			}
+			else if( i == rh - 1){
+				int cur = min(i + 1 + pt.y, img_back.rows - 1); 
+				tmp -= img_back.at<double>(cur, j + pt.x );
+			}
+			if( j == 0){
+				int cur = max(j - 1 + pt.x, 0);
+				tmp -= img_back.at<double>( i + pt.y, cur);
+			}
+			else if( j == rw - 1 && pt.x < img_back.cols - 1){
+				int cur = min(j + 1 + pt.x, img_back.cols - 1);
+				tmp -= img_back.at<double>( i + pt.y, cur);
+			}
 			BPtr[ get_ind( i, j, rw ) ] = tmp;
 		}
 	}
 }
 
+void getPolyB( Mat &img_front, Mat &img_back, Rect roi, Point pt, Mat &B, vector<vector<int> > &MapId, vector<pair<int,int> > &IdMap){
+	Mat Lap;
+	int rh = roi.height;
+	int rw = roi.width;
+	int siz = IdMap.size();
+	Mat lk = Mat::zeros( 3, 3, CV_64FC1 );
+	double * lkPtr = lk.ptr<double>();
+	lkPtr[1] = 1.0;
+	lkPtr[3] = 1.0;
+	lkPtr[5] = 1.0;
+	lkPtr[7] = 1.0;
+	lkPtr[4] = -4.0;
+	B = Mat::zeros( siz, 1, CV_64FC1);
+	//get Lap matrix
+	filter2D( img_front, Lap, -1, lk);
+	double * BPtr = B.ptr<double>();
+	for(int i = 0; i < siz; i++){
+		int x = IdMap[i].first;
+		int y = IdMap[i].second;
+		double tmp = Lap.at<double>(x, y);
+		//border
+		if(x == 0 || (x > 0 && MapId[x-1][y] < 0)){
+			int cur = max(0, pt.y + x -1);
+			tmp -= img_back.at<double>(cur, pt.x + y);
+		}
+		if(x == rh -1 || (x < rh -1 && MapId[x+1][y] < 0)){
+			int cur = min(x + 1 + pt.y, img_back.rows - 1); 
+			tmp -= img_back.at<double>(cur, pt.x + y);
+		}
+		if(y == 0 || (y > 0 && MapId[x][y-1] < 0)){
+			int cur = max(0, y - 1 + pt.x);
+			tmp -= img_back.at<double>(x + pt.y, cur);
+		}
+		if(y == rw - 1 || (y < rw - 1 && MapId[x][y+1] < 0)){
+			int cur = min(y + 1 + pt.x, img_back.cols - 1);
+			tmp -= img_back.at<double>(x + pt.y, cur);
+		}
+		BPtr[i] = tmp;	
+	}
+}
 /*
  * Poisson fusion
  * img_front : front img
@@ -180,10 +261,12 @@ void getMaskMapTable(Mat &Mask, Rect roi, vector<vector<int> > & MapId, vector<p
 	}
 }
 
+
 void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt, Mat &ans){
 	int rh = roi.height;
 	int rw = roi.width;
-	Mat A, B;
+	vector<vector<int> > A;
+	Mat B;
 	long start, end;
 	vector <Mat> rgb_f,rgb_b,result;
 	split(img_front, rgb_f);
@@ -195,40 +278,55 @@ void polygonPoisson(Mat &img_front, Mat &img_back, Mat &mask, Rect roi, Point pt
 	cout << "rh:" << rh << " rw:" << rw << endl;
 	cout << "mask: rows:" << mask.rows << ", cols:" << mask.cols << endl;
 	getMaskMapTable(mask,roi,MapId,IdMap);
+	cout << "Rect pixel : " << MapId.size() * MapId[0].size() << endl;
+	cout << "IdMap size( num of x) : " << IdMap.size() << endl;
+	/*
 	for(int i = 0; i < rh; i++){
 		for(int j = 0; j < rw; j++){
 			if(MapId[i][j] >= 0) cout << "*";
 			else cout << " ";	
 		}
 		cout << endl;
-	}
+	}*/
 	/*for(int i = 0; i < IdMap.size(); i++){
 		cout << i << " : [" << IdMap[i].first << "," << IdMap[i].second <<"]"<< endl;
 	}
 	*/
-	//start = time(NULL);
+	A = getPolySparseA(MapId, IdMap);
 	/*
-	 * for(int k = 0; k < img_back.channels(); k++){
-		cout << " For rgb[" << k << "]..." << endl;
-		//getB(rgb_f[k], rgb_b[k], roi, pt, B);	
-
-		Mat res;
-		double delta = 0.00001;
-		
-		//solve_FR_SparseA(rw, rh, B, ans3, delta );
-		//long t4 = time(NULL);
-		
-		//cout << "\tCost " << (t4 - t3) * 1000 << " ms.\n" << endl;
-		
-		//ans3 = ans.reshape(0, rh);
-		//result.push_back( ans3 );
+	for(int i = 0; i < 10; i++){
+		cout << i << " : [" << IdMap[i].first << "," << IdMap[i].second <<"] ";
+		for(int j = 0; j < A[i].size(); j++){
+			cout << A[i][j] << " " ;
+		}
+		cout << endl;
 	}
 	*/
-	//end = time(NULL);
-	//cout << " Poisson cost " << (end - start) * 1000 << " ms." << endl;
-	//cout << " ------------------------------------------------------ \n" << endl;
-	//merge( result, ans );
-	//ans = img_front;
-	img_front.copyTo(ans);
+	start = time(NULL);
+	for(int k = 0; k < img_back.channels(); k++){
+		cout << " For rgb[" << k << "]..." << endl;
+		getPolyB(rgb_f[k], rgb_b[k], roi, pt, B, MapId, IdMap);	
+
+		Mat res;
+		Mat res_rect = Mat::zeros(rh, rw, CV_64FC1);
+		double delta = 0.00001;
+		long t0 = time(NULL);
+		solve_FR_PolySparseA(rw, rh, B, A, res, delta );
+		long t1 = time(NULL);
+		cout << "\tCost " << (t1 - t0) * 1000 << " ms.\n" << endl;
+		for(int i = 0; i < rh; i++){
+			double * Ptr = res_rect.ptr<double>(i);
+			for(int j = 0; j < rw; j++){
+				if(MapId[i][j] < 0) Ptr[j] = rgb_b[k].at<double>(pt.y + i, pt.x + j);
+				else Ptr[j] = res.at<double>(MapId[i][j],0);
+			}
+		}
+		result.push_back( res_rect );
+	}
+	end = time(NULL);
+	cout << "Poly Poisson cost " << (end - start) * 1000 << " ms." << endl;
+	cout << " ------------------------------------------------------ \n" << endl;
+	merge( result, ans );
+	//img_front.copyTo(ans);
 
 }

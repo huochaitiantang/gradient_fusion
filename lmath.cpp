@@ -236,3 +236,40 @@ void solve_FR_SparseA( int rw, int rh, Mat &b, Mat &ans, double delta ){
 	cout << " solve FR_SpareA for step " << k << " ." << endl;
 	x.copyTo(ans);
 }
+
+void solve_FR_PolySparseA( int rw, int rh, Mat &b, vector<vector<int> > &A, Mat &ans, double delta ){
+	int k = 0, h = b.rows;
+	Mat del = Mat::ones( h, 1, CV_64FC1 );
+	del *= delta;
+	Mat tmp;
+	Mat x = Mat::zeros( h, 1, CV_64FC1 );
+	Mat p = Mat::zeros( h, 1, CV_64FC1 );
+	Mat r = b.clone();
+	double rTr_2, alpha;
+	tmp = r.t() * r ;
+	double rTr_1 = tmp.at<double>();
+	while( less_than( r , del ) == false ){
+		k++;
+		if( k == 1 ){
+			r.copyTo( p );
+		}
+		else{
+			p = ( r + ( rTr_1 / rTr_2 ) * p );
+		}
+		//Mat Ap = cal_Ap( rw, rh, p);
+		Mat Ap = cal_Ap2( A, p);
+		tmp = p.t() * Ap;
+		alpha = rTr_1 / tmp.at<double>();
+		x = ( x + alpha * p );
+		r = ( r - alpha * Ap );
+		
+		rTr_2 = rTr_1;
+		tmp = r.t() * r;
+		rTr_1 = tmp.at<double>();
+	}
+	cout << " solve FR_SpareA for step " << k << " ." << endl;
+	x.copyTo(ans);
+
+
+
+}
