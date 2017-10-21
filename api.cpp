@@ -1,69 +1,32 @@
 #include "common.hpp"
 
-Mat getPoissonMat(const Mat &back, const Mat &front, Rect b_roi, int type){
+Mat getFusionMat(const Mat &back, const Mat &front, const Mat &mask, Rect b_roi, int type){
 	Mat ans = back.clone();
 	Rect roi = Rect(0, 0, b_roi.width, b_roi.height);
-	if( type == 1 ){
-		cout << " Opencv3.2 Normal Clone " << endl;
-		Mat mask = 255 * Mat::ones( front.rows, front.cols, front.depth() );
-		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
-		long t1 = time(NULL);
+	Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
+	long t1 = time(NULL);
+	if(type == 0){
+		cout << "Poisson Opencv3.2 Normal Clone " << endl;
 		seamlessClone( front, back, mask, center, ans, NORMAL_CLONE );
-		long t2 = time(NULL);
-		cout << " Normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-		//imshow("ans",ans);
-		return ans;
 	}
-	else if( type == 2 ){
-		cout << " Opencv3.2 Mixed Clone " << endl;
-		Mat mask = 255 * Mat::ones( front.rows, front.cols, front.depth() );
-		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
-		long t1 = time(NULL);
+	else if(type == 1){
+		cout << "Poisson Opencv3.2 Mixed Clone " << endl;
 		seamlessClone( front, back, mask, center, ans, MIXED_CLONE );
-		long t2 = time(NULL);
-		cout << " Mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-		//imshow("ans",ans);
-		return  ans;
 	}
-	else{
-		cout << " FR Solver " << endl;
+	else if(type == 2){
+		cout << "Poisson Own Rect ROI By FR Solver " << endl;
 		Mat res, in1, in2;
 		print_mat_info( back, "background" );
 		print_mat_info( front, "roi_front" );
 		back.convertTo(in1, CV_64FC3);
 		front.convertTo(in2, CV_64FC3);	
 		poisson(in2, in1, roi, b_roi.tl(), res);
-		print_mat_info( res, "poisson res" );
 		res.convertTo(res, CV_8UC3);
 		Mat roimat = ans(b_roi);
 		res.copyTo(roimat);
-		return ans;
 	}
-
-}
-
-Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rect b_roi, int type){
-	Mat ans = back.clone();
-	Rect roi = Rect(0, 0, b_roi.width, b_roi.height);
-	if( type == 1 ){
-		cout << " Opencv3.2 Normal Clone " << endl;
-		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
-		long t1 = time(NULL);
-		seamlessClone( front, back, mask, center, ans, NORMAL_CLONE );
-		long t2 = time(NULL);
-		cout << " Normal seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-		return ans;
-	}
-	else if(type == 2){
-		cout << " Opencv3.2 Mixed Clone " << endl;
-		Point center( b_roi.x + b_roi.width / 2, b_roi.y + b_roi.height / 2 );
-		long t1 = time(NULL);
-		seamlessClone( front, back, mask, center, ans, MIXED_CLONE );
-		long t2 = time(NULL);
-		cout << " Mixed seamless clone cost " << (t2-t1)*1000 << " ms." << endl;
-	}
-	else{
-		cout << " Poly FR Solver " << endl;
+	else if(type == 3){
+		cout << "Poisson Own Poly ROI By FR Solver " << endl;
 		Mat res, in1, in2, msk;
 		vector<Mat> msk_v;
 		back.convertTo(in1, CV_64FC3);
@@ -79,7 +42,19 @@ Mat getPolygonPoissonMat(const Mat &back, const Mat &front, const Mat &mask, Rec
 		res.convertTo(res, CV_8UC3);
 		Mat roimat = ans(b_roi);
 		res.copyTo(roimat);
-		return ans;
 	}
-
+	else if(type == 4){
+		cout << "Poisson Own Drag Drop Solver" << endl;
+		Mat res, msk, in1, in2;
+		vector<Mat> msk_v;
+		split(mask,msk_v);
+		msk = msk_v[0];
+		in1 = back;
+		in2 = front;
+		edgePoisson(in2, in1, msk, roi, b_roi.tl(), ans);
+	}
+	else cout << "No type [" << type << "] fusion!" << endl;
+	long t2 = time(NULL);
+	cout << "Fusion type [" << type << "] Cost "<<(t2-t1)*1000 << " ms." << endl;
+	return ans;
 }
